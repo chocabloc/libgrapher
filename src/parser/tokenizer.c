@@ -10,9 +10,6 @@
 // a reasonable size for a symbol table
 #define DEFAULT_TABLE_SIZE 63
 
-// a reasonable number of pre-allocated tokens
-#define DEFAULT_NUM_TOKENS 63
-
 // get possible token type from starting character
 static tokentype_t get_type(char c) {
     static const char* ops = "+-*/^!";
@@ -28,28 +25,13 @@ static tokentype_t get_type(char c) {
     return -1;
 }
 
-// add token to tokenlist
-static tokenlist_t* add_token(tokenlist_t* tl, token_t token) {
-    tl->num_tokens++;
-
-    // check new size and reallocate if needed
-    size_t new_size = sizeof(tokenlist_t) + (tl->num_tokens) * sizeof(token_t);
-    if (tl->alloc_size < new_size) {
-        tl->alloc_size = 2 * new_size;
-        tl = realloc(tl, tl->alloc_size);
-    }
-
-    // add token and return
-    tl->tokens[tl->num_tokens - 1] = token;
-    return tl;
-}
-
 tokenlist_t* tk_tokenize(const char* expr) {
     // allocate space for token list and its name table
-    size_t alloc_size = sizeof(tokenlist_t) + DEFAULT_NUM_TOKENS * sizeof(token_t);
-    tokenlist_t* tokens = malloc(alloc_size);
-    tokens->alloc_size = alloc_size;
-    tokens->name_table = hm_create(DEFAULT_TABLE_SIZE);
+    tokenlist_t* tlist = malloc(sizeof(tokenlist_t));
+    *tlist = (tokenlist_t) { 
+        .name_table = hm_create(DEFAULT_TABLE_SIZE),
+        .tokens = vec_new(token_t)
+    };
 
     while (*expr != '\0') {
         if (*expr == ' ') {
@@ -94,9 +76,9 @@ tokenlist_t* tk_tokenize(const char* expr) {
                 name[len] = '\0';
 
                 // add to name table, if it doesn't exist
-                int64_t key = hm_find(tokens->name_table, name);
+                int64_t key = hm_find(tlist->name_table, name);
                 if (key == -1)
-                    tk.data.name = hm_add(tokens->name_table, name);
+                    tk.data.name = hm_add(tlist->name_table, name);
                 else
                     tk.data.name = key;
                 expr--;
@@ -108,20 +90,21 @@ tokenlist_t* tk_tokenize(const char* expr) {
                 goto fail;
             } break;
         }
-        add_token(tokens, tk);
+        vec_push(&(tlist->tokens), tk);
         expr++;
     }
 
-    return tokens;
+    return tlist;
 
 fail:
-    hm_free(tokens->name_table, true);
-    free(tokens);
+    hm_free(tlist->name_table, true);
+    vec_destruct(&(tlist->tokens));
+    free(tlist);
     return NULL;
 }
 
 // print token list in a human readable format
-void tk_debug(tokenlist_t* tokens) {
+void tk_debug(tokenlist_t* tlist) {
     static char *types[] = {
         [TOKEN_TYPE_LITERAL] = "LITERAL",
         [TOKEN_TYPE_NAME] = "NAME",
@@ -129,12 +112,12 @@ void tk_debug(tokenlist_t* tokens) {
         [TOKEN_TYPE_SEPARATOR] = "SEPARATOR"
     };
 
-    for (size_t i = 0; i < tokens->num_tokens; i++) {
-        token_t t = tokens->tokens[i];
-        printf("[%zu] = { .type = %s, .value = ", i, types[t.type]);
+    size_t index = 0;
+    vec_iterate(&(tlist)->tokens, t) {
+        printf("[%zu] = { .type = %s, .value = ", index++, types[t.type]);
         switch (t.type) {
             case TOKEN_TYPE_NAME:
-                printf("\"%s\"", hm_get(tokens->name_table, t.data.name));
+                printf("\"%s\"", hm_get(tlist->name_table, t.data.name));
                 break;
 
             case TOKEN_TYPE_OPERATOR:
@@ -150,5 +133,5 @@ void tk_debug(tokenlist_t* tokens) {
                 break;
         }
         printf(" }\n");
-    }
+    } vec_iterate_end(&(tlist->tokens));
 }

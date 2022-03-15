@@ -1,5 +1,5 @@
 .phony = library test clean
-all: library test
+all: library
 
 # common compiler options
 CC = gcc
@@ -13,6 +13,7 @@ LIB_SRC = $(shell find ./src -name "*.c")
 LIB_OBJ = $(LIB_SRC:.c=.o)
 LIB_CFLAGS = -fpic
 LIB_LDFLAGS = -shared -lm
+
 library: $(LIBRARY)
 
 $(LIBRARY): $(LIB_OBJ)
@@ -39,4 +40,4 @@ $(TEST_OBJ): %o: %c
 
 # cleans up object files
 clean:
-	rm -f $(LIB_OBJ) $(TEST_OBJ)
+	rm -f $(LIB_OBJ) $(TEST_OBJ) $(TESTER)

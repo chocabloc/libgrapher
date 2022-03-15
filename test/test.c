@@ -14,7 +14,6 @@ static char *tests[] = {
 #define TESTS_LEN (sizeof(tests) / sizeof(tests[0]))
 
 int main(void) {
-    // open the shared library
     printf("test: opening libgrapher.so\n");
     void* lib = dlopen("libgrapher.so", RTLD_LAZY);
     if (!lib) {

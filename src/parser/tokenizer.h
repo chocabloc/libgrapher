@@ -4,6 +4,7 @@
 #include <complex.h>
 #include <stdint.h>
 #include "utils/hashmap.h"
+#include "utils/vector.h"
 
 // possible token type
 typedef enum {
@@ -25,9 +26,7 @@ typedef struct {
 
 typedef struct {
     hashmap_t* name_table;
-    size_t num_tokens;
-    size_t alloc_size;
-    token_t tokens[];
+    vec_struct(token_t) tokens;
 } tokenlist_t;
 
 tokenlist_t* tk_tokenize(const char* expr);

@@ -20,13 +20,8 @@ typedef struct ast_node {
     // node data
     union {
         complex float literal;
-        enum {
-            FN_ADD,
-            FN_NEGATE,
-            FN_MULTIPLY,
-            FN_INVERT
-        } function;
-        int variable; // index to variable table
+        int64_t variable;
+        int64_t function;
     } data;
 
     // children (maximum 4)
@@ -34,6 +29,6 @@ typedef struct ast_node {
 } ast_node_t;
 
 typedef struct {
-    hashmap_t* var_table;
+    hashmap_t* name_table;
     ast_node_t* root;
 } ast_t;
