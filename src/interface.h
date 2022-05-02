@@ -1,3 +1,3 @@
 #pragma once
 
-int compile_expr(char* expr);
+int load_expr(const char* expr);

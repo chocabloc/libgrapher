@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define HASHMAP_SIZE_DEFAULT 63
+
 typedef struct hm_bucket {
     size_t num_elems, alloc_size;
     const char* elems[];

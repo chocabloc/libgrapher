@@ -2,14 +2,16 @@
 #include <dlfcn.h>
 
 // pointers to library function(s)
-static int (*fn_compile_expr)(char* expr);
+static int (*fn_load_expr)(char* expr);
 
 // test expressions
 static char *tests[] = {
         "42",
         "z + 3i",
         "mag(z+1) + mag(z-1) - 1",
-        "sin(real(z)) + cos(imag(z))*i"
+        "sin(real(z)) + cos(imag(z))*i",
+        "pow(mag(z*(1 - 0.3*sin(10*arg(z)))), 2) - arg(z)*arg(z) + 0.5*mag(z)*i",
+        "2 + (3*4 - 7 + (6*5 + (3)))"
 };
 #define TESTS_LEN (sizeof(tests) / sizeof(tests[0]))
 
@@ -22,8 +24,8 @@ int main(void) {
     }
 
     // get the function(s)
-    fn_compile_expr = (typeof(fn_compile_expr)) dlsym(lib, "compile_expr");
-    if (!fn_compile_expr) {
+    fn_load_expr = (typeof(fn_load_expr)) dlsym(lib, "load_expr");
+    if (!fn_load_expr) {
         fprintf(stderr, "error: dlsym(): %s\n", dlerror());
         return -1;
     }
@@ -32,7 +34,7 @@ int main(void) {
     size_t fails = 0;
     for (size_t i = 0; i < TESTS_LEN; i++) {
         printf("\n=== test %lu: \"%s\" ===\n", i+1, tests[i]);
-        if (fn_compile_expr(tests[i]) == -1) {
+        if (fn_load_expr(tests[i]) == -1) {
             printf("=== test %lu failed ===\n", i+1);
             fails++;
         }

@@ -22,14 +22,14 @@
     }
 
 #define vec_push(vec, elem)                                              \
-    {                                                                    \
+    do {                                                                 \
         (vec)->len++;                                                    \
         if ((vec)->alloc_size < (vec)->len * sizeof((vec)->data[0])) {   \
             (vec)->alloc_size = 2 * (vec)->len * sizeof((vec)->data[0]); \
             (vec)->data = realloc((vec)->data, (vec)->alloc_size);       \
         }                                                                \
         (vec)->data[(vec)->len - 1] = elem;                              \
-    }
+    } while(0)
 
 #define vec_destruct(vec)      \
     {                          \
@@ -40,6 +40,6 @@
 
 #define vec_at(vec, index) (vec)->data[index]
 
-#define vec_iterate(vec, var) for (typeof(*((vec)->data)) var = (vec)->data[0]; (vec)->iter < (vec)->len; var = (vec)->data[++((vec)->iter)])
+#define vec_iterate(vec, var) for (typeof(*((vec)->data)) (var) = (vec)->data[0]; (vec)->iter < (vec)->len; (var) = (vec)->data[++((vec)->iter)])
 
 #define vec_iterate_end(vec) (vec)->iter = 0
