@@ -11,7 +11,8 @@ static char *tests[] = {
         "mag(z+1) + mag(z-1) - 1",
         "sin(real(z)) + cos(imag(z))*i",
         "pow(mag(z*(1 - 0.3*sin(10*arg(z)))), 2) - arg(z)*arg(z) + 0.5*mag(z)*i",
-        "2 + (3*4 - 7 + (6*5 + (3)))"
+        "2 + (3*4 - 7 + (6*5 + (3)))",
+        "z + sum(1, 2, 3, 4, 5, 7 + 4356 * cos(39))"
 };
 #define TESTS_LEN (sizeof(tests) / sizeof(tests[0]))
 

@@ -36,6 +36,7 @@
         (vec)->alloc_size = 0; \
         (vec)->len = 0;        \
         free((vec)->data);     \
+        (vec)->data = NULL;    \
     }
 
 #define vec_at(vec, index) (vec)->data[index]
