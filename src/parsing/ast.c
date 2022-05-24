@@ -2,6 +2,7 @@
 #include "tokens.h"
 #include "../utils/vector.h"
 #include "../expression.h"
+#include "error.h"
 
 #define IS_OPERABLE(t) ((t)->type < TOKEN_OPERATOR)
 #define IS_OPERATOR(t) ((t)->type == TOKEN_OPERATOR)
@@ -68,19 +69,19 @@ static void oplist_destruct(struct oplist** ops) {
 
 // convert an operable token to a node
 static ast_node_t* operable_to_node(token_t* t) {
-    if (t->type == TOKEN_AST_FRAGMENT)
-        return t->data.ast_frag;
-    else {
+    if (t->type == TOKEN_AST_FRAGMENT) {
+        ast_node_t* ast_frag = t->data.ast_frag;
+        free(t);
+        return ast_frag;
+    } else {
         ast_node_t* arg = malloc(sizeof(ast_node_t));
         arg->children = (typeof(arg->children)) { 0 };
-        
-        if (t->type == TOKEN_NAME) {
+
+        if (t->type == TOKEN_NAME)
             arg->type = NODE_TYPE_VARIABLE;
-            arg->data.name_id = t->data.name_id;
-        } else if (t->type == TOKEN_LITERAL) {
+        else if (t->type == TOKEN_LITERAL)
             arg->type = NODE_TYPE_LITERAL;
-            arg->data.literal = t->data.literal;
-        }
+        arg->token = t;
         return arg;
     }
 }
@@ -93,18 +94,19 @@ static void dbg_ast(expr_t* expr, ast_node_t* root, size_t lvl) {
     else
         stems.data[lvl] = true;
 
+    token_t* tk = root->token;
     switch (root->type) {
         case NODE_TYPE_OPERATOR:
-            printf("(%c)\n", root->data.operator);
+            printf("(%c)\n", tk->data.operator);
             break;
         
         case NODE_TYPE_FUNCTION:
         case NODE_TYPE_VARIABLE:
-            printf("%s\n", hm_get(expr->name_table, root->data.name_id)->str);
+            printf("%s\n", hm_get(expr->name_table, tk->data.name_id)->str);
             break;
         
         case NODE_TYPE_LITERAL:
-            printf("%.2f\n", root->data.literal);
+            printf("%.2f\n", tk->data.literal);
             break;
     }
 
@@ -123,14 +125,6 @@ static void dbg_ast(expr_t* expr, ast_node_t* root, size_t lvl) {
 
 int parser_make_ast(expr_t* expr)
 {
-    // macro for error handling
-    #define ERROR(s)                           \
-        {                                      \
-            fprintf(stderr, "error: %s\n", s); \
-            ret_val = -1;                      \
-            goto end;                          \
-        }
-
     // indicates success or error
     int ret_val = 0;
 
@@ -153,11 +147,21 @@ int parser_make_ast(expr_t* expr)
         enum { OPERATOR, OPERABLE } expects = OPERABLE;
         for (token_t* tk = p->next; tk != NULL; tk = tk->next) {
             if (expects == OPERABLE) {
-                if (IS_OPERABLE(tk)) {
-                    tk->data.ast_frag = operable_to_node(tk);
-                    tk->type = TOKEN_AST_FRAGMENT;
-                } else {
-                    ERROR("expected operable value");
+                // convert names and literals to ast fragments
+                if (tk->type == TOKEN_NAME || tk->type == TOKEN_LITERAL) {
+                    token_t* fragtoken = malloc(sizeof(token_t));
+                    *fragtoken = (token_t) {
+                        .type = TOKEN_AST_FRAGMENT,
+                        .data.ast_frag = operable_to_node(tk),
+                        .next = tk->next,
+                        .prev = tk->prev
+                    };
+                    tk->prev->next = fragtoken;
+                    tk->next->prev = fragtoken;
+                } else if (!IS_OPERABLE(tk)) {
+                    error_at_token("expected operable value", expr, tk);
+                    ret_val = -1;
+                    goto end;
                 }
                 expects = OPERATOR;
             } else {
@@ -169,15 +173,20 @@ int parser_make_ast(expr_t* expr)
                 } else if (tk->type == TOKEN_COMMA) {
                     vec_push(&args, tk);
                 } else {
-                    ERROR("expected operator, ')', or ','");
+                    error_at_token("expected operator, ')', or ','", expr, tk);
+                    ret_val = -1;
+                    goto end;
                 }
                 expects = OPERABLE;
             }
         }
 
         // mismatched parens
-        if (cp == NULL)
-            ERROR("mismatched parentheses detected");
+        if (cp == NULL) {
+            error_at_token("expected closing bracket", expr, NULL);
+            ret_val = -1;
+            goto end;
+        }
 
         // loop through operator list and convert each into an ast fragment
         // eating up the operator and its arguments in the process
@@ -188,9 +197,9 @@ int parser_make_ast(expr_t* expr)
             ast_node_t* op = malloc(sizeof(ast_node_t));
             *op = (ast_node_t) {
                 .type = NODE_TYPE_OPERATOR,
-                .data.operator= i->op->data.operator,
                 .children = vec_new(ast_node_t*)
             };
+            op->token = i->op;
 
             // create nodes for arguments
             for (int j = 0; j < 2; j++)
@@ -212,11 +221,6 @@ int parser_make_ast(expr_t* expr)
             fragtoken->prev = args[0]->prev;
             args[1]->next->prev = fragtoken;
             fragtoken->next = args[1]->next;
-
-            // deallocate operator and argument tokens
-            free(i->op);
-            free(args[0]);
-            free(args[1]);
         }
 
         // token which will replace outer parens and its contents
@@ -226,14 +230,15 @@ int parser_make_ast(expr_t* expr)
         // it is a function call
         if (p->prev && p->prev->type == TOKEN_NAME) {
 
-            // create the function call node and add
-            // its arguments to it
+            // create the function call node
             ast_node_t* fncall = malloc(sizeof(ast_node_t));
             *fncall = (ast_node_t) {
                 .type = NODE_TYPE_FUNCTION,
-                .data.name_id = p->prev->data.name_id,
                 .children = vec_new(ast_node_t*)
             };
+            fncall->token = p->prev;
+
+            // add its arguments to it
             vec_iterate(&args, c) {
                 vec_push(&(fncall->children), operable_to_node(c->next));
             } vec_iterate_end(&args);
@@ -285,7 +290,6 @@ end:
     if (ret_val == -1) {
         vec_destruct(&args);
         oplist_destruct(&ops);
-        printf("aborting ast generation\n");
     }
     return ret_val;
 }

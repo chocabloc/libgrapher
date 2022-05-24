@@ -9,8 +9,8 @@ static void (*lg_init)(void);
 static char *tests[] = {
         "42",
         "sin(x) + cos(y) - 1",
-        "max(x^2, 2*x, abs(x*y))"
-        
+        "max(x^2, 2*x, abs(x*y))",
+        "x^2 + sin(2*x^2)"
 };
 #define TESTS_LEN (sizeof(tests) / sizeof(tests[0]))
 

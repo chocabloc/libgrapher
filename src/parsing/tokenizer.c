@@ -5,6 +5,7 @@
 #include "parser.h"
 #include "expression.h"
 #include "utils/hashmap.h"
+#include "error.h"
 
 static tokentype_t ttypes[UINT8_MAX + 1] = {
     ['+'] = TOKEN_OPERATOR,
@@ -50,6 +51,7 @@ int parser_tokenize(expr_t* expr) {
 
         token_t* tk = malloc(sizeof(token_t));
         tk->type = get_type(*str);
+        char* tk_start = str;
 
         switch (tk->type) {
             case TOKEN_OPERATOR: {
@@ -98,7 +100,7 @@ int parser_tokenize(expr_t* expr) {
             } break;
 
             case TOKEN_UNKNOWN: {
-                fprintf(stderr, "error: unexpected character '%c'\n", *str);
+                error_at_pos("unexpected character", expr, str - expr->fn_str);
                 free(tk);
                 return -1;
             } break;
@@ -107,6 +109,11 @@ int parser_tokenize(expr_t* expr) {
                 // just to silence compiler warnings
             } break;
         }
+
+        // calculate position and length of token in string
+        tk->str_pos = (size_t)(tk_start - expr->fn_str);
+        tk->str_len = (size_t)(str - tk_start) + 1;
+
         tlist_add(&(expr->tokens), tk);
         str++;
     }
