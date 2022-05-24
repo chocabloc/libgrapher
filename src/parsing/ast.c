@@ -76,7 +76,7 @@ static ast_node_t* operable_to_node(token_t* t) {
         
         if (t->type == TOKEN_NAME) {
             arg->type = NODE_TYPE_VARIABLE;
-            arg->data.var_id = t->data.name_id;
+            arg->data.name_id = t->data.name_id;
         } else if (t->type == TOKEN_LITERAL) {
             arg->type = NODE_TYPE_LITERAL;
             arg->data.literal = t->data.literal;
@@ -86,7 +86,7 @@ static ast_node_t* operable_to_node(token_t* t) {
 }
 
 // print the AST as a pretty tree
-static void dbg_ast(expr_t* expr, ast_node_t* root, int lvl) {
+static void dbg_ast(expr_t* expr, ast_node_t* root, size_t lvl) {
     static vec_struct(bool) stems;
     if (stems.len == lvl)
         vec_push(&stems, true);
@@ -99,20 +99,17 @@ static void dbg_ast(expr_t* expr, ast_node_t* root, int lvl) {
             break;
         
         case NODE_TYPE_FUNCTION:
-            printf("%s()\n", hm_get(expr->name_table, root->data.fun_id));
-            break;
-
         case NODE_TYPE_VARIABLE:
-            printf("%s\n", hm_get(expr->name_table, root->data.var_id));
+            printf("%s\n", hm_get(expr->name_table, root->data.name_id)->str);
             break;
         
         case NODE_TYPE_LITERAL:
-            printf("%.2f + %.2fi\n", creal(root->data.literal), cimag(root->data.literal));
+            printf("%.2f\n", root->data.literal);
             break;
     }
 
     for (size_t i = 0; i < root->children.len; i++) {
-        for (int j = 0; j < lvl; j++)
+        for (size_t j = 0; j < lvl; j++)
             printf(stems.data[j] ? " │" : "  ");
 
         if (i == root->children.len - 1) {
@@ -138,7 +135,6 @@ int parser_make_ast(expr_t* expr)
     int ret_val = 0;
 
     // store indices of parenthesis in order of their opening
-    // TODO: complete ast generation
     vec_struct(token_t*) parens = vec_new(token_t*);
     for (token_t* tk = expr->tokens.last; tk != NULL; tk = tk->prev)
         if (tk->type == TOKEN_OPENING_PAREN)
@@ -235,7 +231,7 @@ int parser_make_ast(expr_t* expr)
             ast_node_t* fncall = malloc(sizeof(ast_node_t));
             *fncall = (ast_node_t) {
                 .type = NODE_TYPE_FUNCTION,
-                .data.fun_id = p->prev->data.name_id,
+                .data.name_id = p->prev->data.name_id,
                 .children = vec_new(ast_node_t*)
             };
             vec_iterate(&args, c) {

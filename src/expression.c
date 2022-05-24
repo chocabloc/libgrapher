@@ -1,10 +1,10 @@
-#include <complex.h>
 #include <string.h>
 #include "expression.h"
 #include "utils/hashmap.h"
 #include "parsing/tokens.h"
 #include "parsing/ast.h"
 #include "parsing/parser.h"
+#include "runtime/rt.h"
 
 // print expression data in human readable format
 void expr_debug(expr_t* expr) {
@@ -40,6 +40,9 @@ expr_t* expr_compile(const char* str) {
     if (parser_make_ast(expr) == -1)
         goto fail;
 
+    if (rt_resolve(expr) == -1)
+        goto fail;
+        
     // TODO: IR and machine code generation
 
 fail:

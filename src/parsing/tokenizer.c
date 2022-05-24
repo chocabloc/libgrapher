@@ -1,7 +1,6 @@
 #include <memory.h>
 #include <math.h>
 #include <stdio.h>
-#include <complex.h>
 #include "tokens.h"
 #include "parser.h"
 #include "expression.h"
@@ -58,7 +57,7 @@ int parser_tokenize(expr_t* expr) {
             } break;
 
             case TOKEN_LITERAL: {
-                complex double num = *(str++) - '0';
+                float num = *(str++) - '0';
                 int dec_places = 0;
 
                 while (*str >= '0' && *str <= '9') {
@@ -72,10 +71,7 @@ int parser_tokenize(expr_t* expr) {
                         num += (*(str++) - '0') / pow(10, dec_places);
                     }
                 }
-                if (*str == 'i')
-                    num *= 1.0i;
-                else
-                    str--;
+                str--;
                 tk->data.literal = num;
             } break;
 
@@ -95,7 +91,7 @@ int parser_tokenize(expr_t* expr) {
                 // add to name table, if it doesn't exist
                 int64_t key = hm_find(expr->name_table, name);
                 if (key == -1)
-                    tk->data.name_id = hm_add(expr->name_table, name);
+                    tk->data.name_id = hm_add(expr->name_table, name, 0);
                 else
                     tk->data.name_id = key;
                 str--;
@@ -105,6 +101,10 @@ int parser_tokenize(expr_t* expr) {
                 fprintf(stderr, "error: unexpected character '%c'\n", *str);
                 free(tk);
                 return -1;
+            } break;
+
+            default: {
+                // just to silence compiler warnings
             } break;
         }
         tlist_add(&(expr->tokens), tk);
@@ -122,7 +122,7 @@ void token_dbg(expr_t* expr, token_t* t) {
 
     switch (t->type) {
         case TOKEN_NAME:
-            printf("%s", hm_get(expr->name_table, t->data.name_id));
+            printf("%s", hm_get(expr->name_table, t->data.name_id)->str);
             break;
 
         case TOKEN_OPERATOR:
@@ -130,7 +130,7 @@ void token_dbg(expr_t* expr, token_t* t) {
             break;
             
         case TOKEN_LITERAL:
-            printf("%.2f + %.2fi", creal(t->data.literal), cimag(t->data.literal));
+            printf("%.2f", t->data.literal);
             break;
             
         case TOKEN_AST_FRAGMENT:

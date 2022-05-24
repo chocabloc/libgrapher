@@ -1,8 +1,13 @@
 #include <stdio.h>
 #include "interface.h"
 #include "expression.h"
+#include "runtime/rt.h"
 
-int load_expr(const char* str) {
+void lg_init(void) {
+    rt_init();
+}
+
+int lg_load(const char* str) {
     expr_t* expr = expr_compile(str);
     if (expr == NULL)
         return -1;

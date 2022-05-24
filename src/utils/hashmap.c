@@ -29,7 +29,7 @@ hashmap_t* hm_create(size_t n) {
     hm->num_buckets = n;
     hm->collisions = 0;
     for (size_t i = 0; i < n; i++) {
-        size_t init_size = sizeof(hm_bucket_t) + 4 * sizeof(char*);
+        size_t init_size = sizeof(hm_bucket_t) + 4*sizeof(hm_elem_t);
         hm_bucket_t* bkt = malloc(init_size);
         bkt->num_elems = 0;
         bkt->alloc_size = init_size;
@@ -38,9 +38,9 @@ hashmap_t* hm_create(size_t n) {
     return hm;
 }
 
-// return string, given its key
+// return element, given its key
 // NULL on error
-const char* hm_get(hashmap_t* hm, int64_t key) {
+hm_elem_t* hm_get(hashmap_t* hm, int64_t key) {
     uint32_t hash = key & 0xffffffff, bkt_i = key >> 32;
     hm_bucket_t* bkt = hm->buckets[hash % hm->num_buckets];
 
@@ -48,10 +48,10 @@ const char* hm_get(hashmap_t* hm, int64_t key) {
     if (bkt_i >= bkt->num_elems)
         return NULL;
 
-    return bkt->elems[bkt_i];
+    return &(bkt->elems[bkt_i]);
 }
 
-// check if string exists in map, and returns its key
+// check if element exists in map, and returns its key
 // returns -1 if it doesn't exist
 int64_t hm_find(hashmap_t* hm, const char* str) {
     uint32_t hash = get_hash(str);
@@ -59,7 +59,7 @@ int64_t hm_find(hashmap_t* hm, const char* str) {
 
     // find string in bucket
     for(size_t i = 0; i < bkt->num_elems; i++) {
-        if (strcmp(str, bkt->elems[i]) == 0)
+        if (strcmp(str, bkt->elems[i].str) == 0)
             return MAKE_KEY(hash, i);
     }
 
@@ -69,7 +69,7 @@ int64_t hm_find(hashmap_t* hm, const char* str) {
 
 // adds string to hashmap, and returns its key
 // return -1 on failure
-int64_t hm_add(hashmap_t* hm, const char* str) {
+int64_t hm_add(hashmap_t* hm, const char* str, uint64_t data) {
     // does it already exist?
     if (hm_find(hm, str) != -1)
         return -1;
@@ -80,7 +80,7 @@ int64_t hm_add(hashmap_t* hm, const char* str) {
     // increment element count and check for available space,
     // resizing if necessary
     bkt->num_elems++;
-    size_t new_size = sizeof(hm_bucket_t) + (bkt->num_elems * sizeof(char*));
+    size_t new_size = sizeof(hm_bucket_t) + (bkt->num_elems * sizeof(hm_elem_t));
     if (bkt->alloc_size < new_size) {
         bkt->alloc_size = new_size*2;
         bkt = realloc(bkt, bkt->alloc_size);
@@ -92,7 +92,9 @@ int64_t hm_add(hashmap_t* hm, const char* str) {
     hm->collisions += bkt->num_elems - 1;
 
     // add string to bucket and return its key
-    bkt->elems[bkt->num_elems - 1] = str;
+    bkt->elems[bkt->num_elems - 1].str = str;
+    bkt->elems[bkt->num_elems - 1].data = data;
+
     return MAKE_KEY(hash, bkt->num_elems - 1);
 }
 
@@ -112,12 +114,8 @@ void hm_dbg(hashmap_t* hm) {
 
 // frees hashmap
 // also frees data if asked to, ignoring const
-void hm_free(hashmap_t* hm, bool free_str) {
-    for (size_t i = 0; i < hm->num_buckets; i++) {
-        if (free_str)
-            for (size_t j = 0; j < hm->buckets[j]->num_elems; j++)
-                free((void*)hm->buckets[i]->elems[j]);
+void hm_free(hashmap_t* hm) {
+    for (size_t i = 0; i < hm->num_buckets; i++)
         free(hm->buckets[i]);
-    }
     free(hm);
 }

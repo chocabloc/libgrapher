@@ -2,17 +2,15 @@
 #include <dlfcn.h>
 
 // pointers to library function(s)
-static int (*fn_load_expr)(char* expr);
+static int (*lg_load)(char*);
+static void (*lg_init)(void);
 
 // test expressions
 static char *tests[] = {
         "42",
-        "z + 3i",
-        "mag(z+1) + mag(z-1) - 1",
-        "sin(real(z)) + cos(imag(z))*i",
-        "pow(mag(z*(1 - 0.3*sin(10*arg(z)))), 2) - arg(z)*arg(z) + 0.5*mag(z)*i",
-        "2 + (3*4 - 7 + (6*5 + (3)))",
-        "z + sum(1, 2, 3, 4, 5, 7 + 4356 * cos(39))"
+        "sin(x) + cos(y) - 1",
+        "max(x^2, 2*x, abs(x*y))"
+        
 };
 #define TESTS_LEN (sizeof(tests) / sizeof(tests[0]))
 
@@ -25,17 +23,21 @@ int main(void) {
     }
 
     // get the function(s)
-    fn_load_expr = (typeof(fn_load_expr)) dlsym(lib, "load_expr");
-    if (!fn_load_expr) {
+    lg_load = (typeof(lg_load))dlsym(lib, "lg_load");
+    lg_init = (typeof(lg_init))dlsym(lib, "lg_init");
+    if (!lg_load || !lg_init) {
         fprintf(stderr, "error: dlsym(): %s\n", dlerror());
         return -1;
     }
+
+    // initialize library
+    lg_init();
 
     // run tests
     size_t fails = 0;
     for (size_t i = 0; i < TESTS_LEN; i++) {
         printf("\n=== test %lu: \"%s\" ===\n", i+1, tests[i]);
-        if (fn_load_expr(tests[i]) == -1) {
+        if (lg_load(tests[i]) == -1) {
             printf("=== test %lu failed ===\n", i+1);
             fails++;
         }

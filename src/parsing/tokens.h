@@ -1,6 +1,5 @@
 #pragma once
 
-#include <complex.h>
 #include <stdint.h>
 #include "ast.h"
 
@@ -21,7 +20,7 @@ typedef enum {
 typedef struct token {
     tokentype_t type;
     union {
-        complex double literal;
+        float literal;
         uint8_t operator;
         int64_t name_id;
         ast_node_t* ast_frag;

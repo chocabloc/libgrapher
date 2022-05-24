@@ -1,6 +1,5 @@
 #pragma once
 
-#include <complex.h>
 #include <stdint.h>
 #include "utils/hashmap.h"
 #include "utils/vector.h"
@@ -18,9 +17,8 @@ typedef struct ast_node {
 
     // node data
     union {
-        complex float literal;
-        int64_t var_id;
-        int64_t fun_id;
+        float literal;
+        int64_t name_id;
         uint8_t operator;
     } data;
 
