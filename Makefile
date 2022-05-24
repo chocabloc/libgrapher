@@ -4,14 +4,14 @@ all: library
 # common compiler options
 CC = gcc
 LD = gcc
-COMMON_CFLAGS = -std=gnu2x -Ofast -flto -Wall -Wextra -I./src
-COMMON_LDFLAGS = -flto
+COMMON_CFLAGS = -std=gnu2x -Wall -Wextra -I./src
+COMMON_LDFLAGS = 
 
 # rules for building the library itself
 LIBRARY = libgrapher.so
 LIB_SRC = $(shell find ./src -name "*.c")
 LIB_OBJ = $(LIB_SRC:.c=.o)
-LIB_CFLAGS = -fpic
+LIB_CFLAGS = -fpic -fvisibility=hidden
 LIB_LDFLAGS = -shared -lm
 
 library: $(LIBRARY)
