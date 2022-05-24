@@ -41,6 +41,9 @@
 
 #define vec_at(vec, index) (vec)->data[index]
 
-#define vec_iterate(vec, var) for (typeof(*((vec)->data)) (var) = (vec)->data[0]; (vec)->iter < (vec)->len; (var) = (vec)->data[++((vec)->iter)])
+#define vec_iterate(vec, var)                                                               \
+        if ((vec)->len > 0)                                                                 \
+            for (typeof(*((vec)->data)) (var) = (vec)->data[0]; (vec)->iter < (vec)->len;   \
+             (var) = (vec)->data[++((vec)->iter)])
 
 #define vec_iterate_end(vec) (vec)->iter = 0
