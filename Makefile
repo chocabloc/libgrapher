@@ -4,7 +4,7 @@ all: debug
 # common compiler options
 CC = gcc
 LD = gcc
-COMMON_CFLAGS = -std=gnu2x -Wall -Wextra -I./src
+COMMON_CFLAGS = -std=gnu2x -Wall -Wextra -Wno-unused-function -I./src
 COMMON_LDFLAGS = 
 
 # rules for building the library itself

@@ -1,10 +1,12 @@
 #ifdef DEBUG
+#define _GNU_SOURCE // for asprintf
 #include <malloc.h>
 #include <stdint.h>
 #include <math.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include "tmalloc.h"
 
 typedef struct adata_t {
@@ -94,7 +96,7 @@ void tmalloc_log_show() {
     int repeat = 0;
     for (adata_t* i = ainfo; i != NULL; i = i->next) {
         char* outstr = NULL;
-        asprintf(&outstr, "%d bytes in %s:%d (function %s)\n", i->size, i->file, i->line, i->function);
+        asprintf(&outstr, "%ld bytes in %s:%d (function %s)\n", i->size, i->file, i->line, i->function);
         if (prev && strcmp(prev, outstr) == 0)
             repeat++;
         else {
