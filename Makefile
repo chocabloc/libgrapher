@@ -1,5 +1,5 @@
-.phony = library test clean
-all: library
+.phony = debug test-gdb release test clean
+all: debug
 
 # common compiler options
 CC = gcc
@@ -14,7 +14,17 @@ LIB_OBJ = $(LIB_SRC:.c=.o)
 LIB_CFLAGS = -fpic -fvisibility=hidden
 LIB_LDFLAGS = -shared -lm
 
-library: $(LIBRARY)
+# should it be run in gdb
+GDB = 
+
+test-gdb: GDB += gdb
+test-gdb: test
+
+debug: COMMON_CFLAGS += -DDEBUG -g
+debug: COMMON_LDFLAGS += -g
+debug: release
+
+release: $(LIBRARY)
 
 $(LIBRARY): $(LIB_OBJ)
 	$(LD) $(LIB_OBJ) $(COMMON_LDFLAGS) $(LIB_LDFLAGS) -o $(LIBRARY)
@@ -30,7 +40,7 @@ TEST_CFLAGS =
 TEST_LDFLAGS = -ldl
 
 test: $(TESTER) $(LIBRARY)
-	LD_LIBRARY_PATH=. $(TESTER)
+	LD_LIBRARY_PATH=. $(GDB) $(TESTER)
 
 $(TESTER): $(TEST_OBJ)
 	$(LD) $(TEST_OBJ) $(COMMON_LDFLAGS) $(TEST_LDFLAGS) -o $(TESTER)

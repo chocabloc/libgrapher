@@ -6,14 +6,6 @@
 #include "parsing/parser.h"
 #include "runtime/rt.h"
 
-// print expression data in human readable format
-void expr_debug(expr_t* expr) {
-    for (token_t* t = expr->tokens.first; t != NULL; t = t-> next) {
-        token_dbg(expr, t);
-    }
-    printf("\n");
-}
-
 expr_t* expr_compile(const char* str) {
     // add parentheses before and after string for
     // easier processing

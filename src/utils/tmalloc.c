@@ -1,3 +1,4 @@
+#ifdef DEBUG
 #include <malloc.h>
 #include <stdint.h>
 #include <math.h>
@@ -87,7 +88,6 @@ void trace_free(void* addr, const char* file, int line, const char* function) {
 }
 
 void tmalloc_log_show() {
-#ifdef TRACE_ALLOCATIONS
     size_t memsize = 0;
 
     char* prev = NULL;
@@ -109,5 +109,5 @@ void tmalloc_log_show() {
     }
     if (prev) free(prev);
     printf("total %ld bytes of allocated memory\n", memsize);
-#endif
 }
+#endif

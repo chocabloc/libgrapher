@@ -79,7 +79,7 @@ static ast_node_t* operable_to_node(token_t* t) {
 }
 
 // print the AST as a pretty tree
-static void dbg_ast(expr_t* expr, ast_node_t* root, size_t lvl) {
+static void dbg_ast(expr_t* expr, ast_node_t* root, size_t lvl, size_t padding) {
     static vec_struct(bool) stems;
     if (stems.len == lvl)
         vec_push(&stems, true);
@@ -103,6 +103,9 @@ static void dbg_ast(expr_t* expr, ast_node_t* root, size_t lvl) {
     }
 
     for (size_t i = 0; i < root->children.len; i++) {
+        for (size_t j = 0; j < padding; j++)
+            printf(" ");
+
         for (size_t j = 0; j < lvl; j++)
             printf(stems.data[j] ? " │" : "  ");
 
@@ -111,7 +114,7 @@ static void dbg_ast(expr_t* expr, ast_node_t* root, size_t lvl) {
             printf(" └─");
         } else
             printf(" ├─");
-        dbg_ast(expr, root->children.data[i], lvl + 1);
+        dbg_ast(expr, root->children.data[i], lvl + 1, padding);
     }
 }
 
@@ -275,7 +278,12 @@ int parser_make_ast(expr_t* expr)
 
     // the first token now contains the ast
     expr->ast_root = expr->tokens.first->data.ast_frag;
-    dbg_ast(expr, expr->ast_root, 0);
+
+#ifdef DEBUG
+    printf("abstract syntax tree: ");
+    dbg_ast(expr, expr->ast_root, 0, 22);
+    printf("\n");
+#endif
 
 end:
     // perform clean-up

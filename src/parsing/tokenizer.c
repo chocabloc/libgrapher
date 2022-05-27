@@ -114,6 +114,15 @@ int parser_tokenize(expr_t* expr) {
         tlist_add(&(expr->tokens), tk);
         str++;
     }
+
+#ifdef DEBUG
+    printf("tokenised expression: ");
+    for (token_t* t = expr->tokens.first; t != NULL; t = t->next) {
+        token_dbg(expr, t);
+    }
+    printf("\n");
+#endif
+
     return 0;
 }
 
