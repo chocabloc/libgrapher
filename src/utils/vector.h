@@ -1,6 +1,6 @@
 #pragma once
 
-#include <malloc.h>
+#include "utils/tmalloc.h"
 #include <stdint.h>
 
 #define DEFAULT_SIZE 8
@@ -18,7 +18,7 @@
         .alloc_size = DEFAULT_SIZE * sizeof(type),  \
         .len = 0,                                   \
         .iter = 0,                                  \
-        .data = malloc(DEFAULT_SIZE * sizeof(type)) \
+        .data = tmalloc(DEFAULT_SIZE * sizeof(type)) \
     }
 
 #define vec_push(vec, elem)                                              \
@@ -26,7 +26,7 @@
         (vec)->len++;                                                    \
         if ((vec)->alloc_size < (vec)->len * sizeof((vec)->data[0])) {   \
             (vec)->alloc_size = 2 * (vec)->len * sizeof((vec)->data[0]); \
-            (vec)->data = realloc((vec)->data, (vec)->alloc_size);       \
+            (vec)->data = trealloc((vec)->data, (vec)->alloc_size);       \
         }                                                                \
         (vec)->data[(vec)->len - 1] = elem;                              \
     } while(0)
@@ -35,7 +35,7 @@
     {                          \
         (vec)->alloc_size = 0; \
         (vec)->len = 0;        \
-        free((vec)->data);     \
+        tfree((vec)->data);     \
         (vec)->data = NULL;    \
     }
 

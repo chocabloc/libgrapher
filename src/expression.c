@@ -17,11 +17,11 @@ void expr_debug(expr_t* expr) {
 expr_t* expr_compile(const char* str) {
     // add parentheses before and after string for
     // easier processing
-    char* pstr = malloc(strlen(str) + 3);
+    char* pstr = tmalloc(strlen(str) + 3);
     sprintf(pstr, "(%s)", str);
 
     // allocate space for expression data
-    expr_t* expr = malloc(sizeof(expr_t));
+    expr_t* expr = tmalloc(sizeof(expr_t));
     *expr = (expr_t) {
         .fn_str = pstr,
         .name_table = hm_create(HASHMAP_SIZE_DEFAULT),

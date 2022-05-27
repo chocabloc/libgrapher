@@ -6,6 +6,7 @@
 // operator definitions
 // NULLed operators are implemented inline
 operator_t rt_ops[UINT8_MAX + 1] = {
+    ['='] = { .name = '=', .precedence = 100, .eval = NULL },
     ['+'] = { .name = '+', .precedence = 200, .eval = NULL },
     ['-'] = { .name = '-', .precedence = 200, .eval = NULL },
     ['*'] = { .name = '*', .precedence = 400, .eval = NULL },
@@ -24,7 +25,7 @@ static function_t rt_funcs[] = {
     { .name = "max", .num_args = -1, .eval = NULL },
     { .name = "min", .num_args = -1, .eval = NULL },
 };
-#define RT_NUM_FUNCS 7
+#define RT_NUM_FUNCS (sizeof(rt_funcs) / sizeof(rt_funcs[0]))
 
 static hashmap_t* fn_map;
 
@@ -43,6 +44,6 @@ void rt_init() {
     // could probably be done at compile time
     // in a more powerful language
     fn_map = hm_create(HASHMAP_SIZE_DEFAULT);
-    for (int i = 0; i < RT_NUM_FUNCS; i++)
+    for (size_t i = 0; i < RT_NUM_FUNCS; i++)
         hm_add(fn_map, rt_funcs[i].name, (uint64_t)(&(rt_funcs[i])));
 }

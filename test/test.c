@@ -10,7 +10,8 @@ static char *tests[] = {
         "42",
         "sin(x) + cos(y) - 1",
         "max(x^2, 2*x, abs(x*y))",
-        "x^2 + sin(2*x^2)"
+        "r = x^2 + sin(2*x^2)",
+        "the_answer_to_life_the_universe_and_everything = 42"
 };
 #define TESTS_LEN (sizeof(tests) / sizeof(tests[0]))
 

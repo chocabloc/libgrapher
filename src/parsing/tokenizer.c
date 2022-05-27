@@ -5,14 +5,10 @@
 #include "parser.h"
 #include "expression.h"
 #include "utils/hashmap.h"
+#include "runtime/rt.h"
 #include "error.h"
 
 static tokentype_t ttypes[UINT8_MAX + 1] = {
-    ['+'] = TOKEN_OPERATOR,
-    ['-'] = TOKEN_OPERATOR,
-    ['*'] = TOKEN_OPERATOR,
-    ['/'] = TOKEN_OPERATOR,
-    ['^'] = TOKEN_OPERATOR,
     ['('] = TOKEN_OPENING_PAREN,
     [')'] = TOKEN_CLOSING_PAREN,
     [','] = TOKEN_COMMA
@@ -20,11 +16,12 @@ static tokentype_t ttypes[UINT8_MAX + 1] = {
 
 // get possible token type from starting character
 static tokentype_t get_type(uint8_t c) {
-    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_')
         return TOKEN_NAME;
-    else if (c >= '0' && c <= '9')
+    if (c >= '0' && c <= '9')
         return TOKEN_LITERAL;
-
+    if (rt_ops[c].name == c)
+        return TOKEN_OPERATOR;
     return ttypes[c];
 }
 
@@ -49,7 +46,7 @@ int parser_tokenize(expr_t* expr) {
             continue;
         }
 
-        token_t* tk = malloc(sizeof(token_t));
+        token_t* tk = tmalloc(sizeof(token_t));
         tk->type = get_type(*str);
         char* tk_start = str;
 
@@ -86,7 +83,7 @@ int parser_tokenize(expr_t* expr) {
                     len++;
 
                 // allocate and fill string
-                name = malloc(len + 1);
+                name = tmalloc(len + 1);
                 memcpy(name, start, len);
                 name[len] = '\0';
 
@@ -101,7 +98,7 @@ int parser_tokenize(expr_t* expr) {
 
             case TOKEN_UNKNOWN: {
                 error_at_pos("unexpected character", expr, str - expr->fn_str);
-                free(tk);
+                tfree(tk);
                 return -1;
             } break;
 

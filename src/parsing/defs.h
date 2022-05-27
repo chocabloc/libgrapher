@@ -49,7 +49,7 @@ struct ast_node_t {
         NODE_TYPE_VARIABLE
     } type;
 
-    token_t* token;
+    token_t token;
 
     // children
     vec_struct(struct ast_node_t*) children;

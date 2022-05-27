@@ -7,6 +7,7 @@
 #include "interface.h"
 #include "expression.h"
 #include "runtime/rt.h"
+#include "utils/tmalloc.h"
 
 [[gnu::visibility("default")]] void lg_init(void) {
     rt_init();

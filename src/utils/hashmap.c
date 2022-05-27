@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-#include <malloc.h>
+#include "utils/tmalloc.h"
 #include <stdbool.h>
 #include <math.h>
 
@@ -25,12 +25,12 @@ static uint32_t get_hash(const char* str) {
 
 // create a hashmap
 hashmap_t* hm_create(size_t n) {
-    hashmap_t* hm = malloc(sizeof(hashmap_t) + n*sizeof(hm_bucket_t*));
+    hashmap_t* hm = tmalloc(sizeof(hashmap_t) + n*sizeof(hm_bucket_t*));
     hm->num_buckets = n;
     hm->collisions = 0;
     for (size_t i = 0; i < n; i++) {
         size_t init_size = sizeof(hm_bucket_t) + 4*sizeof(hm_elem_t);
-        hm_bucket_t* bkt = malloc(init_size);
+        hm_bucket_t* bkt = tmalloc(init_size);
         bkt->num_elems = 0;
         bkt->alloc_size = init_size;
         hm->buckets[i] = bkt;
@@ -83,7 +83,7 @@ int64_t hm_add(hashmap_t* hm, const char* str, uint64_t data) {
     size_t new_size = sizeof(hm_bucket_t) + (bkt->num_elems * sizeof(hm_elem_t));
     if (bkt->alloc_size < new_size) {
         bkt->alloc_size = new_size*2;
-        bkt = realloc(bkt, bkt->alloc_size);
+        bkt = trealloc(bkt, bkt->alloc_size);
         hm->buckets[hash % hm->num_buckets] = bkt;
     }
 
@@ -116,6 +116,6 @@ void hm_dbg(hashmap_t* hm) {
 // also frees data if asked to, ignoring const
 void hm_free(hashmap_t* hm) {
     for (size_t i = 0; i < hm->num_buckets; i++)
-        free(hm->buckets[i]);
-    free(hm);
+        tfree(hm->buckets[i]);
+    tfree(hm);
 }

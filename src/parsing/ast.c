@@ -2,11 +2,12 @@
 #include "tokens.h"
 #include "../utils/vector.h"
 #include "../expression.h"
+#include "../runtime/rt.h"
 #include "error.h"
 
 #define IS_OPERABLE(t) ((t)->type < TOKEN_OPERATOR)
 #define IS_OPERATOR(t) ((t)->type == TOKEN_OPERATOR)
-#define PRECEDENCE(t) op_prec[(t)->data.operator]
+#define PRECEDENCE(t) rt_ops[(t)->data.operator].precedence
 
 // operator list sorted according to precedence
 struct oplist {
@@ -14,19 +15,10 @@ struct oplist {
     struct oplist* next;
 };
 
-// precedence order
-static int op_prec[UINT8_MAX + 1] = {
-    ['^'] = 600,    
-    ['/'] = 400,
-    ['*'] = 400,
-    ['+'] = 200,
-    ['-'] = 200
-};
-
 // insert operator into correct position in oplist
 // (left-to-right associative)
 static void oplist_add(struct oplist** ops, token_t* t) {
-    struct oplist* newop = malloc(sizeof(struct oplist));
+    struct oplist* newop = tmalloc(sizeof(struct oplist));
     newop->op = t;
 
     // insert at beginning
@@ -60,10 +52,10 @@ static void oplist_destruct(struct oplist** ops) {
 
     while ((*ops)->next) {
         struct oplist* tmp = (*ops)->next;
-        free(*ops);
+        tfree(*ops);
         *ops = tmp;
     }
-    free(*ops);
+    tfree(*ops);
     *ops = NULL;
 }
 
@@ -71,17 +63,17 @@ static void oplist_destruct(struct oplist** ops) {
 static ast_node_t* operable_to_node(token_t* t) {
     if (t->type == TOKEN_AST_FRAGMENT) {
         ast_node_t* ast_frag = t->data.ast_frag;
-        free(t);
+        tfree(t);
         return ast_frag;
     } else {
-        ast_node_t* arg = malloc(sizeof(ast_node_t));
+        ast_node_t* arg = tmalloc(sizeof(ast_node_t));
         arg->children = (typeof(arg->children)) { 0 };
 
         if (t->type == TOKEN_NAME)
             arg->type = NODE_TYPE_VARIABLE;
         else if (t->type == TOKEN_LITERAL)
             arg->type = NODE_TYPE_LITERAL;
-        arg->token = t;
+        arg->token = *t;
         return arg;
     }
 }
@@ -94,19 +86,19 @@ static void dbg_ast(expr_t* expr, ast_node_t* root, size_t lvl) {
     else
         stems.data[lvl] = true;
 
-    token_t* tk = root->token;
+    token_t tk = root->token;
     switch (root->type) {
         case NODE_TYPE_OPERATOR:
-            printf("(%c)\n", tk->data.operator);
+            printf("(%c)\n", tk.data.operator);
             break;
         
         case NODE_TYPE_FUNCTION:
         case NODE_TYPE_VARIABLE:
-            printf("%s\n", hm_get(expr->name_table, tk->data.name_id)->str);
+            printf("%s\n", hm_get(expr->name_table, tk.data.name_id)->str);
             break;
         
         case NODE_TYPE_LITERAL:
-            printf("%.2f\n", tk->data.literal);
+            printf("%.2f\n", tk.data.literal);
             break;
     }
 
@@ -149,15 +141,8 @@ int parser_make_ast(expr_t* expr)
             if (expects == OPERABLE) {
                 // convert names and literals to ast fragments
                 if (tk->type == TOKEN_NAME || tk->type == TOKEN_LITERAL) {
-                    token_t* fragtoken = malloc(sizeof(token_t));
-                    *fragtoken = (token_t) {
-                        .type = TOKEN_AST_FRAGMENT,
-                        .data.ast_frag = operable_to_node(tk),
-                        .next = tk->next,
-                        .prev = tk->prev
-                    };
-                    tk->prev->next = fragtoken;
-                    tk->next->prev = fragtoken;
+                    tk->data.ast_frag = operable_to_node(tk);
+                    tk->type = TOKEN_AST_FRAGMENT;
                 } else if (!IS_OPERABLE(tk)) {
                     error_at_token("expected operable value", expr, tk);
                     ret_val = -1;
@@ -193,20 +178,28 @@ int parser_make_ast(expr_t* expr)
         for (struct oplist* i = ops; i != NULL; i = i->next) {
             token_t* args[2] = { i->op->prev, i->op->next };
 
+            // check if its an assignment and
+            // whether its LHS is a variable
+            if (i->op->data.operator == '=' && args[0]->data.ast_frag->token.type != TOKEN_NAME) {
+                    error_at_token("LHS of '=' must be a variable", expr, i->op);
+                    ret_val = -1;
+                    goto end;
+            }
+
             // create node for the operator
-            ast_node_t* op = malloc(sizeof(ast_node_t));
+            ast_node_t* op = tmalloc(sizeof(ast_node_t));
             *op = (ast_node_t) {
                 .type = NODE_TYPE_OPERATOR,
                 .children = vec_new(ast_node_t*)
             };
-            op->token = i->op;
+            op->token = *(i->op);
 
             // create nodes for arguments
             for (int j = 0; j < 2; j++)
                 vec_push(&(op->children), operable_to_node(args[j]));
 
             // create token for the ast fragment
-            token_t* fragtoken = malloc(sizeof(token_t));
+            token_t* fragtoken = tmalloc(sizeof(token_t));
             *fragtoken = (token_t) {
                 .type = TOKEN_AST_FRAGMENT,
                 .data.ast_frag = op,
@@ -231,12 +224,12 @@ int parser_make_ast(expr_t* expr)
         if (p->prev && p->prev->type == TOKEN_NAME) {
 
             // create the function call node
-            ast_node_t* fncall = malloc(sizeof(ast_node_t));
+            ast_node_t* fncall = tmalloc(sizeof(ast_node_t));
             *fncall = (ast_node_t) {
                 .type = NODE_TYPE_FUNCTION,
                 .children = vec_new(ast_node_t*)
             };
-            fncall->token = p->prev;
+            fncall->token = *(p->prev);
 
             // add its arguments to it
             vec_iterate(&args, c) {
@@ -244,7 +237,7 @@ int parser_make_ast(expr_t* expr)
             } vec_iterate_end(&args);
 
             // create token for function call
-            tkr = malloc(sizeof(token_t));
+            tkr = tmalloc(sizeof(token_t));
             tkr->type = TOKEN_AST_FRAGMENT;
             tkr->data.ast_frag = fncall;
 
@@ -271,9 +264,9 @@ int parser_make_ast(expr_t* expr)
 
         // free parens and commas
         vec_iterate(&args, a) {
-            free(a);
+            tfree(a);
         } vec_iterate_end(&args);
-        free(cp);
+        tfree(cp);
 
         // free operator and argument lists
         vec_destruct(&args);

@@ -7,7 +7,7 @@
 static int resolve_subtree(expr_t* expr, ast_node_t* t, int errors) {
     // only functions and variables need to be resolved
     if (t->type == NODE_TYPE_FUNCTION || t->type == NODE_TYPE_VARIABLE) {
-        hm_elem_t* e = hm_get(expr->name_table, t->token->data.name_id);
+        hm_elem_t* e = hm_get(expr->name_table, t->token.data.name_id);
 
         // unresolvable, don't bother with it
         if (e->data == UINT64_MAX)
@@ -21,7 +21,7 @@ static int resolve_subtree(expr_t* expr, ast_node_t* t, int errors) {
         
         // name not found
         if (e->data == 0) {
-            error_at_token("could not resolve name", expr, t->token);
+            error_at_token("could not resolve name", expr, &(t->token));
 
             // mark it as unresolvable and increment error count
             e->data = UINT64_MAX;
